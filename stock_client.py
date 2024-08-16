@@ -3,6 +3,7 @@ import requests
 import random
 import string
 import json
+import time
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     DEFAULT_COMPRESSION,
@@ -25,14 +26,21 @@ class StockClient:
         self.stocks: list = []
         self.loops: int = loops if loops >= 0 else 10  # 0 - endless
         self.tracer = tracer
+        self.pause = 0.901
 
     def work(self):
         i = 0
         while self.loops == 0 or i < self.loops:  # 0 - endless loop
             self.get_all_stocks()
+#            for z in range(0, self.pause):
+#                pass
+            time.sleep(self.pause)
             for j in range (0, len(self.stocks)):
                 self.show_stock(j)
                 self.update_stock(j)
+#                for z in range(0, self.pause):
+#                    pass
+                time.sleep(self.pause)
             self.delete_stock()
             for k in range(0, 5):
                 self.create_stock()
