@@ -94,9 +94,9 @@ class StockClient:
 
 
 n = len(sys.argv)
-num_loops = 1
+num_loops = 100
 if n > 1:
     num_loops = int(sys.argv[1])
-s = StockClient(num_loops, tracer)
+s = StockClient(num_loops)
 s.work()
 
