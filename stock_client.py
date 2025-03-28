@@ -11,7 +11,7 @@ class StockClient:
         server:str|None = os.environ.get('SRVURL')
         if server is None:
             server = 'http://localhost:8080'
-        self.api_url: str = f'http://{server}:8080/stocks'
+        self.api_url: str = f'{server}/stocks'
         self.stocks: list = []
         self.loops: int = loops if loops >= 0 else 10  # 0 - endless
         self.pause = 0.901
