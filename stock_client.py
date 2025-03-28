@@ -7,11 +7,11 @@ import time
 import os
 
 class StockClient:
-    def __init__(self, loops: int):
-        server:str|None = os.environ.get('SRVURL')
+    def __init__(self, server:str, loops: int):
         if server is None:
-            server = 'http://localhost:8080'
-        self.api_url: str = f'{server}/stocks'
+            server = 'localhost:8080'
+        self.api_url: str = f'http://{server}/stocks'
+        print(self.api_url)
         self.stocks: list = []
         self.loops: int = loops if loops >= 0 else 10  # 0 - endless
         self.pause = 0.901
@@ -93,10 +93,14 @@ class StockClient:
         return ''.join(random.choice(characters) for _ in range(length))
 
 
-n = len(sys.argv)
-num_loops = 100
-if n > 1:
-    num_loops = int(sys.argv[1])
-s = StockClient(num_loops)
-s.work()
+server:str|None = os.environ.get('SRVURL')
+loops:str|None  = os.environ.get('NUMLOOPS')
 
+print(server)
+print(loops)
+
+num_loops = 10
+if loops is not None:
+    num_loops = int(loops)
+s = StockClient(server=server, loops=num_loops)
+s.work()

@@ -5,5 +5,5 @@ WORKDIR /opt/app
 COPY stock_client.py .
 COPY requirements.txt .
 RUN pip install -r ./requirements.txt
-ENTRYPOINT ["python", "./stock_client.py", "0"]
+ENTRYPOINT ["python", "./stock_client.py"]
 EXPOSE 8080
