@@ -1,0 +1,62 @@
+currencies = {
+    "ARS": "Argentine peso",
+    "AUD": "Australian dollar",
+    "BRL": "Brazilian real",
+    "CAD": "Canadian dollar",
+    "CHF": "Swiss franc",
+    "CNY": "Chinese yuan",
+    "CZK": "Czech koruna",
+    "EGP": "Egyptian pound",
+    "EUR": "Euro",
+    "GBP": "Pound sterling",
+    "KRW": "South Korean won",
+    "KWD": "Kuwaiti dinar",
+    "MXN": "Mexican peso",
+    "NOK": "Norwegian krone",
+    "PLN": "Polish złoty",
+    "SEK": "Swedish krona",
+    "UAH": "Ukrainian hryvnia",
+    "USD": "United States dollar"
+}
+
+countries = {
+    "AR": "Argentina",
+    "AU": "Australia",
+    "BR": "Brazil",
+    "CA": "Canada",
+    "CH": "Switzerland",
+    "CN": "China",
+    "CZ": "Czechia",
+    "EG": "Egypt",
+    "AT": "Austria",
+    "GB": "Great Britain",
+    "KR": "South Korea",
+    "KW": "Kuwait",
+    "MX": "Mexico",
+    "NO": "Norway",
+    "PL": "Poland",
+    "SE": "Sweden",
+    "UA": "Ukraine",
+    "US": "United States"
+}
+
+curr_country = {
+    "ARS": "AR",
+    "AUD": "AU",
+    "BRL": "BR",
+    "CAD": "CA",
+    "CHF": "CH",
+    "CNY": "CN",
+    "CZK": "CZ",
+    "EGP": "EG",
+    "EUR": "AT",
+    "GBP": "PL",
+    "KRW": "KR",
+    "KWD": "KW",
+    "MXN": "MX",
+    "NOK": "NO",
+    "PLN": "PL",
+    "SEK": "SE",
+    "UAH": "UA",
+    "USD": "US"
+}
