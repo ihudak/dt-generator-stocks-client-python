@@ -28,9 +28,9 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
 log_dest:str|None = os.getenv("LOG_DEST")
 if log_dest is None or log_dest == 'screen':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', encoding='utf-8')
 else:
-    logging.basicConfig(filename=f'{log_dest}_client.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename=f'{log_dest}_client.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', encoding='utf-8')
 
 dateformat:str='%F %T.%f'
 
