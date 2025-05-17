@@ -35,7 +35,7 @@ else:
 dateformat:str='%F %T.%f'
 
 class StockClient:
-    def __init__(self, server:str|None, loops:int, create_stocks:int, hardwork_intens:int):
+    def __init__(self, server:str|None, loops:int, create_stocks:int, hardwork_intens:int, tracer):
         if server is None:
             server = 'localhost:8080'
         self.api_url:str = f'http://{server}/stocks'
@@ -44,6 +44,7 @@ class StockClient:
         self.loops: int = loops if loops >= 0 else 10  # 0 - endless
         self.cr_stocks:int = create_stocks
         self.hw_int:int = hardwork_intens
+        self.tracer=tracer
         logging.info(f'INIT: {self.get_timestamp()}: connecting to server {server}')
         logging.info(f'INIT: {self.get_timestamp()}: loops to be executed {loops}')
         logging.info(f'INIT: {self.get_timestamp()}: Hard Work intensity: once per {hardwork_intens} loops')
@@ -194,5 +195,5 @@ num_loops:int = int(loops) if loops is not None else 10
 create_stocks:int = int(cr_stocks) if cr_stocks is not None else 10
 hardwork_intens:int = int(hw_intens) if hw_intens is not None else 100
 
-s = StockClient(server=server, loops=num_loops, create_stocks=create_stocks, hardwork_intens=hardwork_intens)
+s = StockClient(server=server, loops=num_loops, create_stocks=create_stocks, hardwork_intens=hardwork_intens, tracer=tracer)
 s.work()
