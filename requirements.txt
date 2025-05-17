@@ -4,6 +4,14 @@ Deprecated==1.2.14
 googleapis-common-protos==1.63.2
 idna==3.7
 importlib_metadata==7.1.0
+opentelemetry-api==1.33.1
+opentelemetry-exporter-otlp==1.33.1
+opentelemetry-exporter-otlp-proto-common==1.33.1
+opentelemetry-exporter-otlp-proto-grpc==1.33.1
+opentelemetry-exporter-otlp-proto-http==1.33.1
+opentelemetry-proto==1.33.1
+opentelemetry-sdk==1.33.1
+opentelemetry-semantic-conventions==0.54b1
 protobuf==5.29.4
 requests==2.32.3
 typing_extensions==4.12.2

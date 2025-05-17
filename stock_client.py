@@ -8,9 +8,30 @@ import os
 import data_dict
 import logging
 import datetime
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    DEFAULT_COMPRESSION,
+    DEFAULT_ENDPOINT,
+    DEFAULT_TIMEOUT,
+    DEFAULT_TRACES_EXPORT_PATH,
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
+
+log_dest:str|None = os.getenv("LOG_DEST")
+if log_dest is None or log_dest == 'screen':
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+    logging.basicConfig(filename=f'{log_dest}_srv.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 dateformat:str='%F %T.%f'
 
 class StockClient:
@@ -23,9 +44,9 @@ class StockClient:
         self.loops: int = loops if loops >= 0 else 10  # 0 - endless
         self.cr_stocks:int = create_stocks
         self.hw_int:int = hardwork_intens
-        logger.info(f'INIT: {self.get_timestamp()}: connecting to server {server}')
-        logger.info(f'INIT: {self.get_timestamp()}: loops to be executed {loops}')
-        logger.info(f'INIT: {self.get_timestamp()}: Hard Work intensity: once per {hardwork_intens} loops')
+        logging.info(f'INIT: {self.get_timestamp()}: connecting to server {server}')
+        logging.info(f'INIT: {self.get_timestamp()}: loops to be executed {loops}')
+        logging.info(f'INIT: {self.get_timestamp()}: Hard Work intensity: once per {hardwork_intens} loops')
 
     def get_timestamp(self)->str:
         return datetime.datetime.now().strftime(dateformat)[:-3]
@@ -34,112 +55,135 @@ class StockClient:
         i = 0
         while self.loops == 0 or i < self.loops:  # 0 - endless loop
             if i > self.hw_int and (i % self.hw_int == 1 or i % self.hw_int == 2):  # simulate hard work on the server every 100th iteration
-                logger.info(f'STOCK WORKER: {self.get_timestamp()}: Setting HardWork: {i % self.hw_int == 1}')
+                logging.info(f'STOCK WORKER: {self.get_timestamp()}: Setting HardWork: {i % self.hw_int == 1}')
                 hw:dict = {'hw': i % self.hw_int == 1}
                 _ = requests.post(self.hw_api, data=json.dumps(hw), headers=self.__make_headers())
 
-            logger.info(f'STOCK WORKER: {self.get_timestamp()}: loop {i + 1} of {self.loops}')
+            logging.info(f'STOCK WORKER: {self.get_timestamp()}: loop {i + 1} of {self.loops}')
 
-            logger.info(f'STOCK WORKER: {self.get_timestamp()}: getting stocks')
+            logging.info(f'STOCK WORKER: {self.get_timestamp()}: getting stocks')
             self.get_all_stocks()
             for j in range (0, len(self.stocks)):
-                logger.info(f'STOCK WORKER: {self.get_timestamp()}: looping stocks: {j + 1} or {len(self.stocks)}')
-                logger.info(f'STOCK WORKER: {self.get_timestamp()}: showing stock # {j + 1}')
+                logging.info(f'STOCK WORKER: {self.get_timestamp()}: looping stocks: {j + 1} or {len(self.stocks)}')
+                logging.info(f'STOCK WORKER: {self.get_timestamp()}: showing stock # {j + 1}')
                 self.show_stock(isin=self.__pick_stock(index=j))
-                logger.info(f'STOCK WORKER: {self.get_timestamp()}: updating stock # {j + 1}')
+                logging.info(f'STOCK WORKER: {self.get_timestamp()}: updating stock # {j + 1}')
                 self.update_stock(isin=self.__pick_stock(index=j))
 
-            logger.warning(f'STOCK WORKER: {self.get_timestamp()}: showing a non existing stock')
+            logging.warning(f'STOCK WORKER: {self.get_timestamp()}: showing a non existing stock')
             self.show_stock(isin='NONEXISTING')
-            logger.warning(f'STOCK WORKER: {self.get_timestamp()}: updating a non existing stock')
+            logging.warning(f'STOCK WORKER: {self.get_timestamp()}: updating a non existing stock')
             self.update_stock(isin='NONEXISTING')
 
-            logger.info(f'STOCK WORKER: {self.get_timestamp()}: deleting a stock')
+            logging.info(f'STOCK WORKER: {self.get_timestamp()}: deleting a stock')
             self.delete_stock(isin=None)
-            logger.warning(f'STOCK WORKER: {self.get_timestamp()}: deleting a non existing stock')
+            logging.warning(f'STOCK WORKER: {self.get_timestamp()}: deleting a non existing stock')
             self.delete_stock(isin='NONEXISTING')
             for k in range(0, self.cr_stocks):
-                logger.info(f'STOCK WORKER: {self.get_timestamp()}: creating stock {k + 1} of {self.cr_stocks}')
+                logging.info(f'STOCK WORKER: {self.get_timestamp()}: creating stock {k + 1} of {self.cr_stocks}')
                 self.create_stock(isin=None)
             # call create for an existing stock
-            logger.warning(f'STOCK WORKER: {self.get_timestamp()}: calling create for an existing stock')
+            logging.warning(f'STOCK WORKER: {self.get_timestamp()}: calling create for an existing stock')
             self.create_stock(isin=self.__pick_stock(index=-1))
             i += 1
     
 
     def get_all_stocks(self):
-        logger.info(f'GET ALL STOCKS: {self.get_timestamp()}: getting all stocks')
-        resp = requests.get(self.api_url, headers=self.__make_headers())
-        self.stocks = json.loads(resp.text)
+        with self.tracer.start_as_current_span("get_all_stocks") as span:
+            logging.info(f'GET ALL STOCKS: {self.get_timestamp()}: getting all stocks')
+            resp = requests.get(self.api_url, headers=self.__make_headers())
+            self.stocks = json.loads(resp.text)
 
     
     def update_stock(self, isin:str|None):
-        if isin is None:
-            isin = self.__pick_stock(index=-1)
-        logger.info(f'UPDATE STOCK: {self.get_timestamp()}: updating stock {isin}')
-        stock = self.__make_stock(isin=isin)
-        logger.info(f'UPDATE STOCK: {self.get_timestamp()}: patching stock {stock['isin']}')
-        _ = requests.patch(f"{self.api_url}/{stock['isin']}", data=json.dumps({"stock":stock}), headers=self.__make_headers())
+        with self.tracer.start_as_current_span("update_stock") as parent:
+            if isin is None:
+                isin = self.__pick_stock(index=-1)
+            logging.info(f'UPDATE STOCK: {self.get_timestamp()}: updating stock {isin}')
+            stock = self.__make_stock(isin=isin)
+            logging.info(f'UPDATE STOCK: {self.get_timestamp()}: patching stock {stock['isin']}')
+            _ = requests.patch(f"{self.api_url}/{stock['isin']}", data=json.dumps({"stock":stock}), headers=self.__make_headers())
 
 
     def create_stock(self, isin:str|None):
-        stock = {}
-        stock['stock'] = self.__make_stock(isin=isin)
-        logger.info(f'CREATE STOCK: {self.get_timestamp()}: created stock {stock['stock']['isin']}')
-        _ = requests.post(self.api_url, data=json.dumps(stock), headers=self.__make_headers())
+        with self.tracer.start_as_current_span("create_stock") as parent:
+            stock = {}
+            stock['stock'] = self.__make_stock(isin=isin)
+            logging.info(f'CREATE STOCK: {self.get_timestamp()}: created stock {stock['stock']['isin']}')
+            _ = requests.post(self.api_url, data=json.dumps(stock), headers=self.__make_headers())
 
 
     def show_stock(self, isin:str|None):
-        if isin is None:
-            isin = self.__pick_stock(index=-1)
-        logger.info(f'GET STOCK: {self.get_timestamp()}: showing stock {isin}')
-        _ = requests.get(f"{self.api_url}/{isin}", headers=self.__make_headers())
+        with self.tracer.start_as_current_span("show_stock") as parent:
+            if isin is None:
+                isin = self.__pick_stock(index=-1)
+            logging.info(f'GET STOCK: {self.get_timestamp()}: showing stock {isin}')
+            _ = requests.get(f"{self.api_url}/{isin}", headers=self.__make_headers())
 
 
     def delete_stock(self, isin:str|None):
-        if isin is None:
-            isin = self.__pick_stock(index=-1)
-        for s in self.stocks:
-            if s['isin'] == isin:
-                self.stocks.remove(s)
-                break
-        logger.info(f'DELETE STOCK: {self.get_timestamp()}: deleting stock {isin}')
-        _ = requests.delete(f"{self.api_url}/{isin}", headers=self.__make_headers())
+        with self.tracer.start_as_current_span("delete_stock") as parent:
+            if isin is None:
+                isin = self.__pick_stock(index=-1)
+            for s in self.stocks:
+                if s['isin'] == isin:
+                    self.stocks.remove(s)
+                    break
+            logging.info(f'DELETE STOCK: {self.get_timestamp()}: deleting stock {isin}')
+            _ = requests.delete(f"{self.api_url}/{isin}", headers=self.__make_headers())
 
 
     def __pick_stock(self, index: int) -> str:
-        isin = ''
-        if index < 0:
-            index = random.randint(0, len(self.stocks) - 1)
-        if len(self.stocks) < index - 1 or index < 0:
-            logger.error(f'STOCK PICKER: {self.get_timestamp()}: no stock to pick')
-            isin = self.__randstr(6)
-        else:
-            isin = self.stocks[index]['isin']
-            logger.info(f'STOCK PICKER: {self.get_timestamp()}: picked stock {isin}')
-        return isin
+        with self.tracer.start_as_current_span("pick_stock") as child:
+            isin = ''
+            if index < 0:
+                index = random.randint(0, len(self.stocks) - 1)
+            if len(self.stocks) < index - 1 or index < 0:
+                logging.error(f'STOCK PICKER: {self.get_timestamp()}: no stock to pick')
+                isin = self.__randstr(6)
+            else:
+                isin = self.stocks[index]['isin']
+                logging.info(f'STOCK PICKER: {self.get_timestamp()}: picked stock {isin}')
+            return isin
 
 
     def __make_headers(self) -> dict:
-        headers = {}
-        headers['Content-Type'] = 'application/json'
-        return headers
+        with self.tracer.start_as_current_span("make_header") as child:
+            headers = {}
+            headers['Content-Type'] = 'application/json'
+            return headers
 
 
     def __make_stock(self, isin:str|None) -> dict:
-        stock = {}
-        stock['isin'] = isin if isin is not None else self.__randstr(6)
-        stock['name'] = self.__randstr(10)
-        stock['price'] = random.random() * 10000
-        stock['currency'] = list(data_dict.currencies.keys())[random.randint(0, len(data_dict.currencies) - 1)]
-        logger.info(f'STOCK MAKER: {self.get_timestamp()}: generated stock {stock['isin']}')
-        return stock
+        with self.tracer.start_as_current_span("make_stock") as child:
+            stock = {}
+            stock['isin'] = isin if isin is not None else self.__randstr(6)
+            stock['name'] = self.__randstr(10)
+            stock['price'] = random.random() * 10000
+            stock['currency'] = list(data_dict.currencies.keys())[random.randint(0, len(data_dict.currencies) - 1)]
+            logging.info(f'STOCK MAKER: {self.get_timestamp()}: generated stock {stock['isin']}')
+            return stock
 
     
     def __randstr(self, length: int) -> str:
-        characters = string.ascii_uppercase + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
+        with self.tracer.start_as_current_span("rand_str") as child:
+            characters = string.ascii_uppercase + string.digits
+            return ''.join(random.choice(characters) for _ in range(length))
 
+
+# Service name is required for most backends
+resource = Resource(attributes={
+    SERVICE_NAME: "stock_client_python"
+})
+provider = TracerProvider(resource=resource)
+otlp_exporter = OTLPSpanExporter(endpoint="http://localhost:14499/otlp/v1/traces")
+processor = BatchSpanProcessor(otlp_exporter)
+provider.add_span_processor(processor)
+# Sets the global default tracer provider
+trace.set_tracer_provider(provider)
+
+# Creates a tracer from the global tracer provider
+tracer = trace.get_tracer("stock.client.python")
 
 server:str|None = os.environ.get('SRVURL')
 loops:str|None = os.environ.get('NUMLOOPS')
