@@ -90,7 +90,7 @@ class StockClient:
     
 
     def get_all_stocks(self):
-        with self.tracer.start_span("get_all_stocks") as span:
+        with self.tracer.start_as_current_span("get_all_stocks") as span:
             logging.info(f'GET ALL STOCKS: {self.get_timestamp()}: getting all stocks')
             resp = requests.get(self.api_url, headers=self.__make_headers())
             span.set_attribute('stock.operation', 'get all')
@@ -98,7 +98,7 @@ class StockClient:
 
     
     def update_stock(self, isin:str|None):
-        with self.tracer.start_span("update_stock") as parent:
+        with self.tracer.start_as_current_span("update_stock") as parent:
             if isin is None:
                 isin = self.__pick_stock(index=-1)
             logging.info(f'UPDATE STOCK: {self.get_timestamp()}: updating stock {isin}')
@@ -109,7 +109,7 @@ class StockClient:
 
 
     def create_stock(self, isin:str|None):
-        with self.tracer.start_span("create_stock") as parent:
+        with self.tracer.start_as_current_span("create_stock") as parent:
             stock = {}
             stock['stock'] = self.__make_stock(isin=isin)
             logging.info(f'CREATE STOCK: {self.get_timestamp()}: created stock {stock['stock']['isin']}')
@@ -118,7 +118,7 @@ class StockClient:
 
 
     def show_stock(self, isin:str|None):
-        with self.tracer.start_span("show_stock") as parent:
+        with self.tracer.start_as_current_span("show_stock") as parent:
             if isin is None:
                 isin = self.__pick_stock(index=-1)
             logging.info(f'GET STOCK: {self.get_timestamp()}: showing stock {isin}')
@@ -127,7 +127,7 @@ class StockClient:
 
 
     def delete_stock(self, isin:str|None):
-        with self.tracer.start_span("delete_stock") as parent:
+        with self.tracer.start_as_current_span("delete_stock") as parent:
             if isin is None:
                 isin = self.__pick_stock(index=-1)
             for s in self.stocks:
